@@ -163,7 +163,8 @@ object RowLayout extends RelationDSL.TransformerWrapper(
 
 // TODO move it to the core optimizations.
 trait TupleNNormalizer extends TupleNormalizer { self =>
-  val base: InspectableBase with ScalaCore
+  //val base: InspectableBase with ScalaCore
+  val base: RelationDSL.type
   import base.Predef._
 
   rewrite {
@@ -212,7 +213,7 @@ object TupleProcessing {
     }
   }
   def scalaTypeToIRType(tpe: ScalaType): IRType[_] =
-    RelationDSL.IRType(new RelationDSL.TypeRep(tpe))
+    RelationDSL.Predef.IRType(new RelationDSL.TypeRep(tpe))
 
   def getTupleType(arity: Int): IRType[_] = {
     arity match {
@@ -312,7 +313,7 @@ object RowLayoutTransformers {
           size = s
       }
       getTupleType(size) match { case tupType: IRType[tp] =>
-        val newList = ir"newList? : Var[List[$tupType]]"
+        val newList = ir"?newList: Var[List[$tupType]]"
         val body0 = body rewrite {
           case ir"$$list := ($$list.!).::(Row($elems, ${Const(s)}))" =>
             ir"$newList := ($newList.!).::(${constructTupleFromList(elems, s)}.asInstanceOf[$tupType])"
@@ -341,7 +342,7 @@ object RowLayoutTransformers {
         throw RewriteAbort()
       }
       getTupleType(size) match { case tupTypeVal: IRType[tupType] =>
-        val newHm = ir"newHm? : HashMap[String, tupType]"
+        val newHm = ir"?newHm: HashMap[String, tupType]"
         val body0 = body rewrite {
           case ir"$$hm += (($key: String, TupledRow($tup: scala.Product).toRow)); ()" =>
             ir"$newHm += (($key, ($tup.asInstanceOf[tupType]))); ()"
@@ -394,7 +395,7 @@ object ListToArrayBuffer extends RelationDSL.SelfTransformer with SimpleRuleBase
   import RelationDSL.Predef._
 
   def listRewrite[T:IRType, R:IRType,C](list: IR[Var[List[R]],C{val list: Var[List[R]]}], body: IR[T,C{val list: Var[List[R]]}]): IR[T,C] = {
-    val ab = ir"ab? : ArrayBuffer[R]"
+    val ab = ir"?ab: ArrayBuffer[R]"
     val body0 = body rewrite {
       case ir"$$list := ($$list.!).::($e: R)" =>
         ir"$ab += $e; ()"
@@ -474,7 +475,7 @@ object HashMapToOpenHashMap extends RelationDSL.SelfTransformer with SimpleRuleB
   def tableSize = ir"1 << 12"
 
   def hashMapRewrite[T:IRType, K: IRType, R:IRType,C](hm: IR[HashMap[K, R],C{val hm: HashMap[K, R]}], body: IR[T,C{val hm: HashMap[K, R]}]): IR[T,C] = {
-    val ohm = ir"ohm? : OpenHashMap[K, R]"
+    val ohm = ir"?ohm: OpenHashMap[K, R]"
     val body0 = body rewrite {
       case ir"$$hm += (($key: K, $value: R)); ()" =>
         ir"$ohm += (($key, $value))"
@@ -501,7 +502,7 @@ object OpenHashMapCtorInliner extends RelationDSL.SelfTransformer with SimpleRul
   import RelationDSL.Predef._
   rewrite {
     case ir"val $ohm = new OpenHashMap[$k, $v]($size, $c, $positions, $keys, $values); $body: $t" =>
-      val count = ir"count? : Var[Int]"
+      val count = ir"?count: Var[Int]"
       val body0 = body rewrite {
         case ir"$$ohm.maxSize" => size
         case ir"$$ohm.count" => ir"$count.!"
@@ -529,7 +530,7 @@ object ArrayBufferColumnar extends RelationDSL.SelfTransformer with SimpleRuleBa
     val tpArgs = (for (i <- 0 until size) yield irTypeOf[ArrayBuffer[String]]).toList
     constructTupleType(tpArgs) match {
       case tupType: IRType[tp] =>
-        val abt = ir"abt? : $tupType"
+        val abt = ir"?abt: $tupType"
         val body0 = body rewrite {
           case ir"$$ab.length" =>
             ir"${abt.project[ArrayBuffer[String]](0)}.length"

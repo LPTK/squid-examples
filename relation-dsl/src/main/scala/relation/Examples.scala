@@ -3,52 +3,51 @@ package relation
 object Examples extends App {
   
   import RelationDSL.Predef._
+  import RelationDSL.Quasicodes._
 
-  def pgrm0 = ir"""
+  def pgrm0 = code{
     val schema = Schema("number", "digit")
     val En = Relation.scan("data/En.csv", schema, "|")
     val selEn = En.select(x => x.getField(schema, "number") == "one")
     selEn.print
-  """
+  }
   
-  def pgrmA = ir"""
-    val schema = Schema("number", "digit")
+  def pgrmA = code{    val schema = Schema("number", "digit")
     val En = Relation.scan("data/En.csv", schema, "|")
     val selEn = En.select(x => x.getField(schema, "number") == "one")
     val projEn = selEn.project(Schema("digit", "number"))
     projEn.print
-  """
+  }
 
-  def pgrmB = ir"""
+  def pgrmB = code{
     val EnSchema = Schema("number", "digit")
     val En = Relation.scan("data/En.csv", EnSchema, "|")
     val FrSchema = Schema("digit", "nombre")
     val Fr = Relation.scan("data/Fr.csv", FrSchema, "|")
     val EnFr = En.join(Fr, "digit", "digit")
     EnFr.print
-  """
+  }
 
-  def pgrmC = ir"""
-    val EnSchema = Schema("number", "digit")
+  def pgrmC = code{    val EnSchema = Schema("number", "digit")
     val En = Relation.scan("data/En.csv", EnSchema, "|")
     val FrSchema = Schema("digitf", "nombre")
     val Fr = Relation.scan("data/Fr.csv", FrSchema, "|")
     val EnFr = En.join(Fr, "digit", "digitf")
     EnFr.project(Schema("digit", "number", "nombre")).print
-  """
+  }
 
-  def pgrmD = ir"""
+  def pgrmD = code{
     val schema = Schema("number", "digit", "nombre")
     val En = Relation.scan("data/EnFr.csv", schema, "|")
     val selEn = En.select(x => x.getField(schema, "number") == "one")
     val projEn = selEn.project(Schema("digit", "number"))
     projEn.print
-  """
+  }
 
 
   def pgrm = pgrmB
   
-  println(pgrm
+  val resPgrm = (pgrm
     transformWith RelationLowering
     transformWith SchemaSpecialization
     transformWith ListFusion
@@ -58,4 +57,8 @@ object Examples extends App {
     transformWith OpenHashMapLowering
     transformWith ArrayBufferColumnar
   )
+  System.err.println(RelationDSL.showRep(resPgrm.rep))
+  
+  // write result in gen-output
+  
 }
