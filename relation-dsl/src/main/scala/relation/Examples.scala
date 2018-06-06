@@ -44,10 +44,8 @@ object Examples extends App {
     projEn.print
   }
 
-
-  def pgrm = pgrmB
   
-  val resPgrm = (pgrm
+  def pipeline(pgrm: ClosedCode[Any]) = (pgrm
     transformWith RelationLowering
     transformWith SchemaSpecialization
     transformWith ListFusion
@@ -57,8 +55,14 @@ object Examples extends App {
     transformWith OpenHashMapLowering
     transformWith ArrayBufferColumnar
   )
-  System.err.println(RelationDSL.showRep(resPgrm.rep))
   
-  // write result in gen-output
+  // write results to gen-output:
+  List(pgrmA,pgrmB,pgrmC,pgrmD).map(pipeline).zipWithIndex.foreach { case (resPgrm,i) =>
+    //System.err.println(RelationDSL.showRep(resPgrm.rep))
+    val pgrmStr = RelationDSL.showRep(resPgrm.rep) + "\n"
+    import java.nio.file.{Paths, Files}
+    import java.nio.charset.StandardCharsets
+    Files.write(Paths.get(s"gen-output/pgrm${'A'+i toChar}.scala"), pgrmStr.getBytes(StandardCharsets.UTF_8))
+  }
   
 }
